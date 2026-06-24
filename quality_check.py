@@ -22,24 +22,24 @@ def _check_manquants(df):
                  for c in df.columns if df[c].isnull().mean() > 0.15]
     passe = len(problemes) == 0
     return {"nom": "Valeurs manquantes < 15%", "passe": passe,
-            "statut": "✅" if passe else "⚠️",
+            "statut": "done" if passe else "erreur",
             "details": problemes or ["Toutes colonnes OK"]}
 
 
 def _check_doublons(df):
     nb = int(df.duplicated().sum())
     return {"nom": "Absence de doublons", "passe": nb == 0,
-            "statut": "✅" if nb == 0 else "⚠️",
+            "statut": "done" if nb == 0 else "erreur",
             "details": [f"{nb} doublon(s)" if nb > 0 else "Aucun doublon"]}
 
 
 def _check_equilibre(df):
     if "label" not in df.columns:
-        return {"nom": "Équilibre classes", "passe": True, "statut": "✅", "details": ["Pas de label"]}
+        return {"nom": "Équilibre classes", "passe": True, "statut": "done", "details": ["Pas de label"]}
     ratio = df["label"].mean()
     passe = 0.3 <= ratio <= 0.7
     return {"nom": "Équilibre malades/sains", "passe": passe,
-            "statut": "✅" if passe else "⚠️",
+            "statut": "done" if passe else "erreur",
             "details": [f"Malades: {ratio:.1%} | Sains: {1-ratio:.1%}"]}
 
 
@@ -48,6 +48,6 @@ def _check_completude(df):
     lignes_vides = int((df[cols_symptomes].sum(axis=1) == 0).sum())
     passe = lignes_vides == 0
     return {"nom": "Lignes avec au moins 1 symptôme", "passe": passe,
-            "statut": "✅" if passe else "⚠️",
+            "statut": "done" if passe else "erreur",
             "details": [f"{lignes_vides} ligne(s) sans aucun symptôme"
                         if lignes_vides > 0 else "Toutes les lignes ont des symptômes"]}

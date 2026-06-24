@@ -6,6 +6,7 @@ import time
 import requests
 import pandas as pd
 from bs4 import BeautifulSoup
+from sklearn.preprocessing import LabelEncoder
 
 URL_BASE       = "https://www.nhs.uk"
 URL_CONDITIONS = "https://www.nhs.uk/conditions/"
@@ -86,6 +87,7 @@ MOTS_CLES = {
     "loss_of_smell":        ["loss of smell","anosmia","can't smell"],
 }
 
+
 LABELS_FR = {
     "fever":"Fièvre","cough":"Toux","fatigue":"Fatigue",
     "headache":"Maux de tête","sore_throat":"Mal de gorge",
@@ -116,7 +118,6 @@ LABELS_FR = {
     "loss_of_smell":"Perte d'odorat",
 }
 
-
 def recuperer_liste_maladies(url_base: str, max_maladies: int = 60) -> list:
     print(f"[scraper] Récupération des maladies depuis : {url_base}")
     response = requests.get(url_base, headers=HEADERS, timeout=15)
@@ -144,9 +145,9 @@ def recuperer_liste_maladies(url_base: str, max_maladies: int = 60) -> list:
 
 
 def scraper_symptomes(url: str, nom: str) -> dict:
+
     ligne = {s: 0 for s in SYMPTOMES_CIBLES}
     ligne["maladie"] = nom
-    ligne["label"]   = 1
     try:
         response = requests.get(url, headers=HEADERS, timeout=10)
         response.raise_for_status()
@@ -161,7 +162,7 @@ def scraper_symptomes(url: str, nom: str) -> dict:
                     ligne[symptome] = 1
                     break
     except Exception as e:
-        print(f"[scraper] ⚠️ {nom} : {e}")
+        print(f"[scraper] {nom} : {e}")
     return ligne
 
 
@@ -184,9 +185,9 @@ def generer_sains(nb: int) -> list:
     sains = []
     legers = ["runny_nose","sneezing","fatigue","headache"]
     for _ in range(nb):
+
         ligne = {s: 0 for s in SYMPTOMES_CIBLES}
         ligne["maladie"] = "Sain"
-        ligne["label"]   = 0
         nb_s = random.randint(0, 1)
         for s in random.sample(legers, min(nb_s, len(legers))):
             ligne[s] = 1
@@ -205,17 +206,25 @@ def construire_dataset(url: str, max_maladies: int = 100,
         lignes.append(ligne)
         time.sleep(0.4)
 
-    # Supprimer les maladies sans symptômes
+
     lignes = [l for l in lignes if sum(l[s] for s in SYMPTOMES_CIBLES) > 0]
 
     sains = generer_sains(len(lignes))
     df = pd.DataFrame(lignes + sains)
 
-    cols = ["maladie"] + SYMPTOMES_CIBLES + ["label"]
+
+    cols = ["maladie"] + SYMPTOMES_CIBLES
     df = df[[c for c in cols if c in df.columns]]
     df[SYMPTOMES_CIBLES] = df[SYMPTOMES_CIBLES].fillna(0).astype(int)
 
+    le = LabelEncoder()
+    df["label"] = le.fit_transform(df["maladie"])
+
+    nb_classes = df["label"].nunique()
+    print(f"[scraper]  {nb_classes} classes distinctes générées")
+    print(df[["maladie","label"]].drop_duplicates().sort_values("label").to_string())
+
     os.makedirs("data/raw", exist_ok=True)
     df.to_csv("data/raw/symptoms_dataset.csv", index=False)
-    print(f"[scraper] ✅ Dataset : {len(df)} lignes")
+    print(f"[scraper] Dataset sauvegardé : {len(df)} lignes")
     return df
