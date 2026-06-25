@@ -148,7 +148,7 @@ def predire(symptomes: dict, modele: str) -> dict:
 
     nb_symptomes = sum(symptomes.values())
 
-    if prob_sain > 0.50 and nb_symptomes <= 1:
+    if prob_sain > 0.50 and nb_symptomes <= 3:
         est_sain   = True
         nom_predit = "Sain"
         proba_max  = prob_sain
